@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bubble Shooter | 3 Lives | Large Cursor | Bubbles Multiply</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(145deg, #0a2f3a 0%, #05161f 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', 'Poppins', system-ui, sans-serif;
+      padding: 1rem;
+      /* Custom large cursor for the entire body */
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="%23ffaa44" stroke-width="2"/><circle cx="16" cy="16" r="8" fill="%23ffaa44" stroke="%23ffffff" stroke-width="1.5"/><circle cx="16" cy="16" r="3" fill="%23ffffff"/></svg>') 16 16, crosshair;
+    }
+
+    .game-container {
+      background: linear-gradient(135deg, #1a4a5f, #0d2e3a);
+      border-radius: 2rem;
+      padding: 1.5rem;
+      box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      border-radius: 1.5rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="none" stroke="%23ffaa44" stroke-width="2.5"/><circle cx="18" cy="18" r="10" fill="%23ffaa44" stroke="%23ffffff" stroke-width="2"/><circle cx="18" cy="18" r="4" fill="%23ffffff"/><path d="M18 2 L18 8 M18 28 L18 34 M2 18 L8 18 M28 18 L34 18" stroke="%23ffaa44" stroke-width="2" stroke-linecap="round"/></svg>') 18 18, crosshair;
+    }
+
+    .info-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      padding: 0.8rem 1.5rem;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 2rem;
+      backdrop-filter: blur(8px);
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-family: monospace;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #aad4e0;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #ffd966;
+      text-shadow: 0 0 5px rgba(255, 200, 100, 0.5);
+    }
+
+    .lives {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+    }
+
+    .heart {
+      font-size: 1.8rem;
+      transition: all 0.2s ease;
+    }
+
+    .heart.lost {
+      opacity: 0.3;
+      filter: grayscale(0.5);
+    }
+
+    .speed-bar {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      min-width: 220px;
+    }
+
+    .speed-label {
+      font-size: 0.7rem;
+      color: #aad4e0;
+      letter-spacing: 1px;
+    }
+
+    .speed-value {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #ffaa66;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #2c3e44;
+      border-radius: 10px;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ffaa44, #ff6b44);
+      width: 0%;
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    button {
+      background: linear-gradient(135deg, #ff8c42, #e67e22);
+      border: none;
+      padding: 0.5rem 1.5rem;
+      border-radius: 2rem;
+      font-weight: bold;
+      font-size: 1rem;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-family: monospace;
+    }
+
+    button:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(255, 140, 66, 0.4);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .sound-status {
+      font-size: 0.7rem;
+      color: #aad4e0;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 0.3rem 0.8rem;
+      border-radius: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sound-toggle {
+      background: none;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .game-over {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      backdrop-filter: blur(10px);
+      padding: 2rem 3rem;
+      border-radius: 2rem;
+      text-align: center;
+      z-index: 100;
+      display: none;
+      border: 2px solid #ffaa44;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+
+    .game-over h3 {
+      color: #ffaa44;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .game-over p {
+      color: white;
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    .warning {
+      animation: warningPulse 0.3s ease-in-out;
+    }
+
+    @keyframes warningPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); color: #ff8866; }
+    }
+
+    .life-lost-effect {
+      animation: shakeEffect 0.3s ease-in-out;
+    }
+
+    @keyframes shakeEffect {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    /* Custom cursor hint */
+    .cursor-hint {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.6);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      color: #ffaa66;
+      font-family: monospace;
+      pointer-events: none;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+
+    @media (max-width: 800px) {
+      .info-panel {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .stats {
+        justify-content: center;
+      }
+      .stat-value {
+        font-size: 1.2rem;
+      }
+      .heart {
+        font-size: 1.4rem;
+      }
+      .cursor-hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-container">
+  <canvas id="gameCanvas" width="1000" height="600"></canvas>
+  
+  <div class="info-panel">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">SCORE</div>
+        <div class="stat-value" id="scoreValue">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">BUBBLES POPPED</div>
+        <div class="stat-value" id="poppedValue">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">ACTIVE BUBBLES</div>
+        <div class="stat-value" id="bubbleCount">3</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">SPEED</div>
+        <div class="stat-value" id="speedValue">1.50</div>
+      </div>
+    </div>
+    
+    <div class="lives" id="livesContainer">
+      <div class="heart" id="heart1">❤️</div>
+      <div class="heart" id="heart2">❤️</div>
+      <div class="heart" id="heart3">❤️</div>
+    </div>
+    
+    <div class="speed-bar">
+      <div class="speed-label">🐌 SLOW SPEED INCREASE (+0.05 per shot) 🐌</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="speedFill"></div>
+      </div>
+      <div class="speed-value" id="speedMultiplierInfo">Base: 1.5 → Max: 5.0 | +1 bubble per pop</div>
+    </div>
+    
+    <div class="sound-status">
+      <span>🔊 SHOOT SOUND</span>
+      <button id="soundToggleBtn" class="sound-toggle">🔊 ON</button>
+    </div>
+    <button id="resetBtn">🔄 NEW GAME</button>
+  </div>
+</div>
+
+<div id="gameOverModal" class="game-over">
+  <h3>💥 GAME OVER 💥</h3>
+  <p id="finalScoreMsg">You ran out of lives!</p>
+  <button onclick="resetGame()">PLAY AGAIN</button>
+</div>
+
+<div class="cursor-hint">
+  🎯 LARGE AIMING CURSOR
+</div>
+
+<script>
+  // ======================== BUBBLE SHOOTER WITH 3 LIVES & LARGE CURSOR ========================
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  
+  const WIDTH = 1000;
+  const HEIGHT = 600;
+  
+  // Game settings
+  const BASE_BUBBLE_RADIUS = 28;
+  const INITIAL_SPEED = 1.5;
+  const SPEED_INCREMENT = 0.05; // VERY SLOW increase per shot
+  const MAX_SPEED = 5.0;
+  const MAX_LIVES = 3;
+  
+  // Game state
+  let bubbles = [];
+  let score = 0;
+  let poppedCount = 0;
+  let currentSpeed = INITIAL_SPEED;
+  let lives = MAX_LIVES;
+  let gameRunning = true;
+  let animationId = null;
+  let invincibilityFrames = false;
+  let invincibilityTimer = null;
+  
+  // Mouse position for custom cursor trail (optional)
+  let mouseX = 0, mouseY = 0;
+  
+  // Sound effects
+  let soundEnabled = true;
+  let audioContext = null;
+  
+  // Bright bubble colors
+  const bubbleColors = [
+    '#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE',
+    '#448AFF', '#40C4FF', '#18FFFF', '#64DD17', '#76FF03',
+    '#FFEA00', '#FFC400', '#FF6D00', '#FF3D00', '#F50057',
+    '#FF1744', '#D500F9', '#651FFF', '#00E676', '#FFAB00'
+  ];
+  
+  // ======================== SOUND EFFECTS ========================
+  function initAudio() {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) {
+      console.log("Web Audio not supported");
+      soundEnabled = false;
+    }
+  }
+  
+  function playPopSound() {
+    if (!soundEnabled || !audioContext) return;
+    
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    
+    try {
+      const now = audioContext.currentTime;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(850 + Math.random() * 100, now);
+      oscillator.frequency.exponentialRampToValueAtTime(280, now + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.35, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      
+      oscillator.start(now);
+      oscillator.stop(now + 0.14);
+    } catch(e) {}
+  }
+  
+  function playMultiplySound() {
+    if (!soundEnabled || !audioContext) return;
+    if (audioContext.state === 'suspended') audioContext.resume();
+    try {
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.frequency.setValueAtTime(650, now);
+      osc.frequency.exponentialRampToValueAtTime(450, now + 0.08);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch(e) {}
+  }
+  
+  function playLifeLostSound() {
+    if (!soundEnabled || !audioContext) return;
+    if (audioContext.state === 'suspended') audioContext.resume();
+    try {
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } catch(e) {}
+  }
+  
+  function playGameOverSound() {
+    if (!soundEnabled || !audioContext) return;
+    if (audioContext.state === 'suspended') audioContext.resume();
+    try {
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.5);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    } catch(e) {}
+  }
+  
+  function playResetSound() {
+    if (!soundEnabled || !audioContext) return;
+    if (audioContext.state === 'suspended') audioContext.resume();
+    try {
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.frequency.value = 520;
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch(e) {}
+  }
+  
+  // ======================== BUBBLE CLASS ========================
+  class Bubble {
+    constructor(x, y, radius, color, speedY) {
+      this.x = x;
+      this.y = y;
+      this.radius = radius;
+      this.color = color;
+      this.speedY = speedY;
+      this.glitter = Math.random() * Math.PI * 2;
+      this.pulse = Math.random() * Math.PI * 2;
+    }
+    
+    update() {
+      this.y += this.speedY;
+      this.glitter += 0.08;
+      this.pulse += 0.05;
+    }
+    
+    draw() {
+      ctx.save();
+      
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = `rgba(255, 200, 100, 0.6)`;
+      
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      
+      const grad = ctx.createRadialGradient(
+        this.x - this.radius * 0.25, 
+        this.y - this.radius * 0.25, 
+        this.radius * 0.2,
+        this.x, 
+        this.y, 
+        this.radius
+      );
+      grad.addColorStop(0, `rgba(255, 255, 255, 1)`);
+      grad.addColorStop(0.3, this.color);
+      grad.addColorStop(0.8, this.color);
+      grad.addColorStop(1, `rgba(0, 0, 0, 0.2)`);
+      
+      ctx.fillStyle = grad;
+      ctx.fill();
+      
+      ctx.strokeStyle = `rgba(255, 255, 200, 0.9)`;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      
+      // Highlights
+      ctx.beginPath();
+      ctx.arc(this.x - this.radius * 0.2, this.y - this.radius * 0.2, this.radius * 0.22, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, 0.85)`;
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(this.x + this.radius * 0.25, this.y + this.radius * 0.15, this.radius * 0.12, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 200, 0.7)`;
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      
+      // Pulsing ring
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 200, 100, ${0.4 + Math.sin(this.pulse) * 0.2})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    
+    isClicked(mouseX, mouseY) {
+      const dx = mouseX - this.x;
+      const dy = mouseY - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return dist <= this.radius;
+    }
+  }
+  
+  // ======================== LIVES UI ========================
+  function updateLivesUI() {
+    for (let i = 1; i <= MAX_LIVES; i++) {
+      const heart = document.getElementById(`heart${i}`);
+      if (heart) {
+        if (i <= lives) {
+          heart.classList.remove('lost');
+          heart.style.opacity = '1';
+          heart.style.filter = 'none';
+        } else {
+          heart.classList.add('lost');
+          heart.style.opacity = '0.3';
+          heart.style.filter = 'grayscale(0.5)';
+        }
+      }
+    }
+    
+    // Add shake effect when losing life
+    const livesContainer = document.getElementById('livesContainer');
+    livesContainer.classList.add('life-lost-effect');
+    setTimeout(() => livesContainer.classList.remove('life-lost-effect'), 300);
+  }
+  
+  // ======================== GAME MECHANICS ========================
+  function spawnBubble() {
+    const radius = BASE_BUBBLE_RADIUS + (Math.random() * 8 - 4);
+    const x = Math.random() * (WIDTH - radius * 2) + radius;
+    const y = -radius - Math.random() * 30;
+    const color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+    return new Bubble(x, y, radius, color, currentSpeed);
+  }
+  
+  function spawnMultipleBubbles(count) {
+    for (let i = 0; i < count; i++) {
+      bubbles.push(spawnBubble());
+    }
+  }
+  
+  function updateBubbles() {
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      bubbles[i].update();
+      // Check if any bubble reaches bottom
+      if (bubbles[i].y + bubbles[i].radius >= HEIGHT) {
+        if (!invincibilityFrames && lives > 0) {
+          // Remove the bubble that hit bottom
+          bubbles.splice(i, 1);
+          // Lose a life
+          lives--;
+          updateLivesUI();
+          playLifeLostSound();
+          
+          // Activate invincibility frames (brief immunity)
+          invincibilityFrames = true;
+          if (invincibilityTimer) clearTimeout(invincibilityTimer);
+          invincibilityTimer = setTimeout(() => {
+            invincibilityFrames = false;
+          }, 1000);
+          
+          // Check game over
+          if (lives <= 0) {
+            gameRunning = false;
+            showGameOver();
+            return false;
+          }
+        } else if (invincibilityFrames) {
+          // During invincibility, just remove the bubble without losing life
+          bubbles.splice(i, 1);
+        } else {
+          bubbles.splice(i, 1);
+        }
+        continue;
+      }
+      // Remove if off screen top
+      if (bubbles[i].y + bubbles[i].radius < -100) {
+        bubbles.splice(i, 1);
+      }
+    }
+    return true;
+  }
+  
+  function shootBubble(mouseX, mouseY) {
+    if (!gameRunning) return false;
+    
+    // Find clicked bubble
+    let hitIndex = -1;
+    for (let i = 0; i < bubbles.length; i++) {
+      if (bubbles[i].isClicked(mouseX, mouseY)) {
+        hitIndex = i;
+        break;
+      }
+    }
+    
+    if (hitIndex !== -1) {
+      // Remove the clicked bubble
+      bubbles.splice(hitIndex, 1);
+      score += 10;
+      poppedCount++;
+      
+      playPopSound();
+      
+      // SLOW SPEED INCREASE (+0.05 per shot)
+      if (currentSpeed < MAX_SPEED) {
+        currentSpeed += SPEED_INCREMENT;
+        if (currentSpeed > MAX_SPEED) currentSpeed = MAX_SPEED;
+        
+        // Update all existing bubbles to new speed
+        for (let bubble of bubbles) {
+          bubble.speedY = currentSpeed;
+        }
+      }
+      
+      // MULTIPLY BUBBLES: Add 1 new bubble after each shot
+      bubbles.push(spawnBubble());
+      
+      // Play multiply sound effect
+      playMultiplySound();
+      
+      // Update UI
+      updateUI();
+      
+      return true;
+    }
+    return false;
+  }
+  
+  function updateUI() {
+    document.getElementById('scoreValue').innerText = score;
+    document.getElementById('poppedValue').innerText = poppedCount;
+    document.getElementById('bubbleCount').innerText = bubbles.length;
+    document.getElementById('speedValue').innerText = currentSpeed.toFixed(2);
+    
+    // Update speed bar
+    const speedFill = document.getElementById('speedFill');
+    const percent = ((currentSpeed - INITIAL_SPEED) / (MAX_SPEED - INITIAL_SPEED)) * 100;
+    speedFill.style.width = Math.min(100, Math.max(0, percent)) + '%';
+    
+    const speedInfo = document.getElementById('speedMultiplierInfo');
+    const increaseAmount = (currentSpeed - INITIAL_SPEED).toFixed(2);
+    speedInfo.innerHTML = `🐌 +${increaseAmount} speed | +${SPEED_INCREMENT} per shot | +1 bubble per pop | ❤️ ${lives} lives`;
+    
+    // Flash warning if many bubbles
+    if (bubbles.length > 12) {
+      const countElem = document.getElementById('bubbleCount');
+      countElem.classList.add('warning');
+      setTimeout(() => countElem.classList.remove('warning'), 300);
+    }
+  }
+  
+  function showGameOver() {
+    playGameOverSound();
+    const modal = document.getElementById('gameOverModal');
+    const finalMsg = document.getElementById('finalScoreMsg');
+    finalMsg.innerHTML = `🎯 You popped ${poppedCount} bubble${poppedCount !== 1 ? 's' : ''}!<br>🏆 Score: ${score}<br>⚡ Final Speed: ${currentSpeed.toFixed(2)}<br>💔 You had ${lives} life${lives !== 1 ? 's' : ''} remaining`;
+    modal.style.display = 'block';
+  }
+  
+  function hideGameOver() {
+    const modal = document.getElementById('gameOverModal');
+    modal.style.display = 'none';
+  }
+  
+  window.resetGame = function() {
+    // Reset all game variables
+    score = 0;
+    poppedCount = 0;
+    currentSpeed = INITIAL_SPEED;
+    lives = MAX_LIVES;
+    gameRunning = true;
+    invincibilityFrames = false;
+    
+    if (invincibilityTimer) clearTimeout(invincibilityTimer);
+    
+    // Clear all bubbles
+    bubbles = [];
+    
+    // Start with 3 bubbles
+    for (let i = 0; i < 3; i++) {
+      bubbles.push(spawnBubble());
+    }
+    
+    // Update UI
+    updateLivesUI();
+    updateUI();
+    
+    // Hide game over modal
+    hideGameOver();
+    
+    // Play reset sound
+    playResetSound();
+  };
+  
+  // ======================== DRAW & ANIMATION ========================
+  function drawBackground() {
+    const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    grad.addColorStop(0, '#3a9eb3');
+    grad.addColorStop(0.4, '#2a8aa0');
+    grad.addColorStop(0.7, '#1a6f82');
+    grad.addColorStop(1, '#0e5568');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    
+    // Light rays
+    ctx.globalAlpha = 0.12;
+    for (let i = 0; i < 15; i++) {
+      ctx.beginPath();
+      ctx.moveTo(40 + i * 70, 0);
+      ctx.lineTo(20 + i * 70, HEIGHT);
+      ctx.lineTo(60 + i * 70, HEIGHT);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    
+    // Danger zone at bottom
+    const grad2 = ctx.createLinearGradient(0, HEIGHT - 80, 0, HEIGHT);
+    grad2.addColorStop(0, 'rgba(255, 80, 40, 0)');
+    grad2.addColorStop(0.7, 'rgba(255, 60, 30, 0.5)');
+    ctx.fillStyle = grad2;
+    ctx.fillRect(0, HEIGHT - 80, WIDTH, 80);
+    
+    // Warning line
+    ctx.beginPath();
+    ctx.moveTo(0, HEIGHT - 65);
+    ctx.lineTo(WIDTH, HEIGHT - 65);
+    ctx.strokeStyle = `rgba(255, 100, 50, ${0.7 + Math.sin(Date.now() * 0.008) * 0.3})`;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 15]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = '#ff8866';
+    ctx.fillText('⚠️ DANGER ZONE - BUBBLES HERE COST A LIFE ⚠️', WIDTH - 380, HEIGHT - 45);
+  }
+  
+  // Draw a large custom cursor ring on canvas (visual feedback)
+  function drawCursorRing() {
+    if (!gameRunning) return;
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 22, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 200, 100, 0.8)`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 14, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 255, 200, 0.9)`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 6, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 200, 100, 0.5)`;
+    ctx.fill();
+  }
+  
+  function draw() {
+    drawBackground();
+    
+    // Draw all bubbles
+    for (let bubble of bubbles) {
+      bubble.draw();
+    }
+    
+    // Draw large cursor ring for better visibility
+    drawCursorRing();
+    
+    // UI text on canvas
+    ctx.font = 'bold 16px monospace';
+    ctx.fillStyle = '#ffffaa';
+    ctx.shadowBlur = 3;
+    ctx.shadowColor = 'black';
+    ctx.fillText('🎯 CLICK ON BUBBLES TO POP!', 25, 45);
+    
+    ctx.font = '14px monospace';
+    ctx.fillStyle = '#ffdd99';
+    ctx.fillText(`🐌 +${SPEED_INCREMENT} SPEED per pop | 🫧 +1 BUBBLE per pop | ❤️ ${lives} LIVES`, 25, 85);
+    
+    // Invincibility indicator
+    if (invincibilityFrames) {
+      ctx.font = 'bold 18px monospace';
+      ctx.fillStyle = '#ffaa88';
+      ctx.fillText('✨ INVINCIBLE! ✨', WIDTH - 180, 80);
+    }
+    
+    // Speed indicator on canvas
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = '#ffcc88';
+    ctx.fillText(`Speed: ${currentSpeed.toFixed(2)}`, WIDTH - 120, 50);
+    
+    ctx.shadowBlur = 0;
+    
+    if (!gameRunning) {
+      ctx.font = 'bold 44px monospace';
+      ctx.fillStyle = '#ffaa66';
+      ctx.shadowBlur = 8;
+      ctx.fillText('GAME OVER', WIDTH/2 - 130, HEIGHT/2 - 50);
+      ctx.font = '18px monospace';
+      ctx.fillStyle = '#ffdd99';
+      ctx.fillText('Click "NEW GAME" to play again', WIDTH/2 - 160, HEIGHT/2 + 30);
+      ctx.shadowBlur = 0;
+    }
+  }
+  
+  function gameLoop() {
+    if (gameRunning) {
+      const stillRunning = updateBubbles();
+      if (!stillRunning) {
+        gameRunning = false;
+      }
+    }
+    draw();
+    animationId = requestAnimationFrame(gameLoop);
+  }
+  
+  // ======================== EVENT HANDLERS ========================
+  function handleCanvasClick(e) {
+    if (!gameRunning) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    let clientX, clientY;
+    if (e.touches) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+      e.preventDefault();
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    const canvasX = (clientX - rect.left) * scaleX;
+    const canvasY = (clientY - rect.top) * scaleY;
+    
+    if (canvasX >= 0 && canvasX <= WIDTH && canvasY >= 0 && canvasY <= HEIGHT) {
+      shootBubble(canvasX, canvasY);
+    }
+  }
+  
+  function handleMouseMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+    
+    const canvasX = (clientX - rect.left) * scaleX;
+    const canvasY = (clientY - rect.top) * scaleY;
+    
+    if (canvasX >= 0 && canvasX <= WIDTH && canvasY >= 0 && canvasY <= HEIGHT) {
+      mouseX = canvasX;
+      mouseY = canvasY;
+    }
+  }
+  
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const toggleBtn = document.getElementById('soundToggleBtn');
+    toggleBtn.innerHTML = soundEnabled ? '🔊 ON' : '🔇 OFF';
+    
+    if (soundEnabled && audioContext && audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+  }
+  
+  // ======================== INITIALIZATION ========================
+  function init() {
+    initAudio();
+    
+    // Start with 3 bubbles
+    for (let i = 0; i < 3; i++) {
+      bubbles.push(spawnBubble());
+    }
+    
+    updateLivesUI();
+    updateUI();
+    
+    canvas.addEventListener('click', handleCanvasClick);
+    canvas.addEventListener('touchstart', handleCanvasClick, { passive: false });
+    canvas.addEventListener('mousemove', handleMouseMove);
+    
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      resetGame();
+    });
+    
+    document.getElementById('soundToggleBtn').addEventListener('click', toggleSound);
+    
+    // Resume audio on first interaction
+    canvas.addEventListener('click', () => {
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+    }, { once: true });
+    
+    animationId = requestAnimationFrame(gameLoop);
+  }
+  
+  init();
+</script>
+</body>
+</html>
